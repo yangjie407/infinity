@@ -1,0 +1,46 @@
+{
+    "name": "elasticsearch_dbpedia",
+    "app": "elasticsearch",
+    "app_path": "servers/elasticsearch/",
+    "connection_url": "http://localhost:9200",
+    "data_path": "datasets/dbpedia/corpus.jsonl",
+    "data_link": "to_be_set",
+    "insert_batch_size": 8192,
+    "query_path": "datasets/dbpedia/operations.jsonl",
+    "query_link": "to_be_set",
+    "mode": "fulltext",
+    "topK": 10,
+    "index": {
+        "settings": {
+        "index.number_of_shards": 1,
+        "index.number_of_replicas": 0,
+        "index.store.type": "fs",
+        "index.requests.cache.enable": false
+        },
+        "mappings": {
+            "dynamic": "strict",
+            "_source": {
+                "enabled": true
+            },
+            "properties": {
+                "id": {
+                    "type": "text"
+                },
+                "title": {
+                    "type": "text"
+                },
+                "text": {
+                    "type": "text"
+                },
+                "metadata": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "text"
+                        }
+                    }
+                }
+            }
+        }
+    }  
+}

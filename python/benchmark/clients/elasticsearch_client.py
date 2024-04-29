@@ -16,7 +16,7 @@ def work(queries, collection_name, mode, topK):
     client = Elasticsearch("http://127.0.0.1:9200")
     for query in queries:
         if mode == 'fulltext':
-            client.search(index=collection_name, source=["_id", "_score"], body=query, size=topK)
+            client.search(index=collection_name, source=["_id", "_score"], body=query, size=topK, request_cache=False)
         else:
             client.search(index=collection_name, source=["_id", "_score"], knn=query, size=topK)
     client.close()

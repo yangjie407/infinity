@@ -1,0 +1,28 @@
+{
+    "name": "infinity_dbpedia",
+    "app": "infinity",
+    "connection_url": "http://localhost:23817",
+    "data_path": "datasets/dbpedia/corpus.jsonl",
+    "data_link": "to_be_set",
+    "insert_batch_size": 8192,
+    "query_path": "datasets/dbpedia/operations.jsonl",
+    "query_link": "to_be_set",
+    "mode": "fulltext",
+    "schema": {"id": {"type": "varchar"},
+        "title": {"type": "varchar"},
+        "text": {"type": "varchar"}
+    },
+    "topK":10,
+    "index": {
+        "id": {
+            "type": "text"
+        },
+        "title": {
+            "type": "text"
+        },
+        "text": {
+            "type": "text"
+        }
+    },
+    "batch_size": 8192 
+}

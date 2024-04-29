@@ -22,5 +22,5 @@
     "query_link": "http://ann-benchmarks.com/gist-960-euclidean.hdf5",
     "ground_truth_path": "datasets/gist/gist-960-euclidean.hdf5",
     "ground_truth_link": "http://ann-benchmarks.com/gist-960-euclidean.hdf5",
-    "insert_batch_size": 8192
+    "insert_batch_size": 1024
 }
