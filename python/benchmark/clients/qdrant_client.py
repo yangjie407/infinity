@@ -7,9 +7,20 @@ import time
 import json
 import h5py
 from typing import Any, List, Optional
+import numpy as np
+import multiprocessing
 
 from .base_client import BaseClient
 
+def work(queries, collection_name, topK):
+    client = QC('http://localhost:6333')
+    for query in queries:
+        client.search(
+            collection_name=collection_name,
+            query_vector=query,
+            limit=topK,
+        )
+    client.close()
 class QdrantClient(BaseClient):
     def __init__(self,
                  mode: str,
@@ -24,6 +35,8 @@ class QdrantClient(BaseClient):
         elif self.data['distance'] == 'L2':
             self.distance = Distance.EUCLID
         self.path_prefix = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.threads = 16
+        self.rounds = 1
     
     def upload_bach(self, ids: list[int], vectors, payloads = None):
         self.client.upsert(
@@ -80,12 +93,12 @@ class QdrantClient(BaseClient):
                                                 field_schema=field_schema)
         dataset_path = os.path.join(self.path_prefix, self.data['data_path'])
         if not os.path.exists(dataset_path):
-            self.download_data(self.data['data_link'], dataset_path)
+            raise FileNotFoundError(f"Dataset file {dataset_path} not found")
         vector_name = self.data['vector_name']
         batch_size=self.data['insert_batch_size']
         total_time = 0
         _, ext = os.path.splitext(dataset_path)
-        if ext == '.json':
+        if ext == '.json' or ext == '.jsonl':
             with open(dataset_path, 'r') as f:
                     vectors = []
                     payloads = []
@@ -114,7 +127,7 @@ class QdrantClient(BaseClient):
                     if i % batch_size == 0 and i != 0:
                         self.upload_bach(list(range(i-batch_size, i)), vectors)
                         vectors= []
-                    vectors.append(line)
+                    vectors.append(line.tolist())
                 if vectors:
                     self.upload_bach(list(range(i-len(vectors)+1, i+1)), vectors)
         else:
@@ -125,32 +138,103 @@ class QdrantClient(BaseClient):
         query_path = os.path.join(self.path_prefix, self.data['query_path'])
         results = []
         _, ext = os.path.splitext(query_path)
-        if ext == '.json' and self.data['mode'] == 'vector':
+        if (ext == '.json' or ext == '.jsonl') and self.data['mode'] == 'vector':
             with open(query_path, 'r') as f:
                 for line in f.readlines():
                     query = json.loads(line)
                     start = time.time()
-                    result = self.client.search(
+                    res = self.client.search(
                         collection_name=self.collection_name,
                         query_vector=query['vector'],
                         limit=self.data.get('topK', 10),
                         with_payload=False
                     )
                     end = time.time()
-                    print(f"latency of search: {(end - start)*1000:.2f} milliseconds")
+                    latency = (end - start) * 1000
+                    result = [(hit.id, hit.score) for hit in res]
+                    result.append(latency)
                     results.append(result)
         elif ext == '.hdf5' and self.data['mode'] == 'vector':
             with h5py.File(query_path, 'r') as f:
-                start = time.time()
                 for line in f['test']:
-                    result = self.client.search(
+                    start = time.time()
+                    res = self.client.search(
                         collection_name=self.collection_name,
                         query_vector=line,
                         limit=self.data.get('topK', 10),
                     )
+                    end = time.time()
+                    latency = (end-start) * 1000
+                    result = [(hit.id, hit.score) for hit in res]
+                    result.append(latency)
                     results.append(result)
                 end = time.time()
-                print(f"latency of KNN search: {(end - start)*1000/len(f['test']):.2f} milliseconds")
         else:
             raise TypeError("Unsupported file type")
         return results
+    
+    def search_parallel(self) -> list[list[Any]]:
+        query_path = os.path.join(self.path_prefix, self.data["query_path"])
+        _, ext = os.path.splitext(query_path)
+        results = []
+        queries = [[] for _ in range(self.threads)]
+        total_queries_count = 0
+        if ext == '.hdf5':
+            with h5py.File(query_path, 'r') as f:
+                for i, line in enumerate(f['test']):
+                    total_queries_count += 1
+                    queries[i % self.threads].append(line)
+        else:
+            raise TypeError("Unsupported file type")
+        for i in range(self.rounds):
+            p = multiprocessing.Pool(self.threads)
+            start = time.time()
+            for idx in range(self.threads):
+                p.apply_async(work, args=(queries[idx], self.collection_name, self.data['topK']))
+            p.close()
+            p.join()
+            end = time.time()
+            dur = end - start
+            results.append(f"Round {i + 1}:")
+            results.append(f"Total Dur: {dur:.2f} s")
+            results.append(f"Query Count: {total_queries_count}")
+            results.append(f"QPS: {(total_queries_count / dur):.2f}")
+
+        for result in results:
+            print(result)
+
+    def check_and_save_results(self, results: list[list[Any]]):
+        if 'ground_truth_path' in self.data:
+            ground_truth_path = self.data['ground_truth_path']
+            _, ext = os.path.splitext(ground_truth_path)
+            precisions = []
+            latencies = []
+            if ext == '.hdf5':
+                with h5py.File(ground_truth_path, 'r') as f:
+                    expected_result = f['neighbors']
+                    for i, result in enumerate(results):
+                        ids = set(x[0] for x in result[:-1])
+                        precision = len(ids.intersection(expected_result[i][:self.data['topK']])) / self.data['topK']
+                        precisions.append(precision)
+                        latencies.append(result[-1])
+            elif ext == '.json' or ext == '.jsonl':
+                with open(ground_truth_path, 'r') as f:
+                    for i, line in enumerate(f):
+                        expected_result = json.loads(line)
+                        result = results[i]
+                        ids = set(x[0] for x in result[:-1])
+                        precision = len(ids.intersection(expected_result['expected_results'][:self.data['topK']])) / self.data['topK']
+                        precisions.append(precision)
+                        latencies.append(result[-1])
+            
+            print(f"mean_time: {np.mean(latencies)}, mean_precisions: {np.mean(precisions)}, \
+                  std_time: {np.std(latencies)}, min_time: {np.min(latencies)}, \
+                  max_time: {np.max(latencies)}, p95_time: {np.percentile(latencies, 95)}, \
+                  p99_time: {np.percentile(latencies, 99)}")
+        else:
+            latencies = []
+            for result in results:
+                latencies.append(result[-1])
+            print(f"mean_time: {np.mean(latencies)}, std_time: {np.std(latencies)}, \
+                    min_time: {np.min(latencies)}, max_time: {np.max(latencies)}, \
+                    p95_time: {np.percentile(latencies, 95)}, p99_time: {np.percentile(latencies, 99)}")

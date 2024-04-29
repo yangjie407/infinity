@@ -7,7 +7,7 @@ from clients.qdrant_client import QdrantClient
 from generate_query_json import generate_query_json
 
 ENGINES = ['infinity', 'qdrant', 'elasticsearch']
-DATA_SETS = ['gist', 'sift', 'geonames', 'enwiki']
+DATA_SETS = ['gist', 'sift', 'enwiki', 'dbpedia']
 
 def parse_args() -> argparse.Namespace:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(description="Vector Database Benchmark")

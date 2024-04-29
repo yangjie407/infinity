@@ -7,6 +7,7 @@ import sys
 import os
 from urllib.parse import urlparse
 import time
+import json
 
 class BaseClient:
     """
@@ -55,10 +56,17 @@ class BaseClient:
         """
         pass
 
+    @abstractmethod
+    def search_parallel(self) -> list[list[Any]]:
+        pass
+
     def run_experiment(self, args):
         """
         run experiment and save results.
         """
-        if args.query:
-            results = self.search()
-            self.check_and_save_results(results)
+
+        # self.upload()
+        self.search()
+        results = self.search()
+        results_qps = self.search_parallel()
+        self.check_and_save_results(results)

@@ -8,6 +8,7 @@
     "insert_batch_size": 8192,
     "vector_name": "embeddings", 
     "query_path": "datasets/sift/sift-128-euclidean.hdf5",
+    "query_link": "http://ann-benchmarks.com/sift-128-euclidean.hdf5",
     "topK": 100,
     "mode": "vector",
     "index": {
@@ -31,5 +32,6 @@
         }
       }
     },
-    "ground_truth_path": "datasets/sift/sift-128-euclidean.hdf5"
+    "ground_truth_path": "datasets/sift/sift-128-euclidean.hdf5",
+    "ground_truth_link": "http://ann-benchmarks.com/sift-128-euclidean.hdf5"
 }
