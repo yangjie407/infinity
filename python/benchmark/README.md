@@ -45,9 +45,6 @@ Usage: run_benchmark.py [OPTIONS]
 Options:
     --engines
         all(default), qdrant, elasticSearch, infinity
-    --hardware
-        8c_16g(default)
-        4c_32g
     --mode
         test mode:  all(default)
         gist,

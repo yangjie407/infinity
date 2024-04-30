@@ -64,8 +64,11 @@ class BaseClient:
         """
         run experiment and save results.
         """
+        start = time.time()
+        self.upload()
+        end = time.time()
+        print(f"insert and build index in {end-start}s")
 
-        # self.upload()
         self.search()
         results = self.search()
         results_qps = self.search_parallel()

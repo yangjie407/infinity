@@ -28,7 +28,7 @@ class QdrantClient(BaseClient):
                  drop_old: bool = True) -> None:
         with open(mode, 'r') as f:
             self.data = json.load(f)
-        self.client = QC(self.data['connection_url'])
+        self.client = QC(self.data['connection_url'], timeout=60)
         self.collection_name = self.data['name']
         if self.data['distance'] == 'cosine':
             self.distance = Distance.COSINE
@@ -158,10 +158,12 @@ class QdrantClient(BaseClient):
             with h5py.File(query_path, 'r') as f:
                 for line in f['test']:
                     start = time.time()
+                    search_params=models.SearchParams(hnsw_ef=64, exact=False)
                     res = self.client.search(
                         collection_name=self.collection_name,
                         query_vector=line,
                         limit=self.data.get('topK', 10),
+                        search_params=search_params
                     )
                     end = time.time()
                     latency = (end-start) * 1000

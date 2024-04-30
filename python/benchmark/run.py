@@ -52,13 +52,9 @@ def get_client(engine: str, config: str, options: argparse.Namespace):
 if __name__ == '__main__':
     args = parse_args()
     config_paths = generate_config_paths(args)
-    if args.generate_terms:
-        # TODO: Write a fixed path for the fulltext benchmark, expand or delete it for the general benchmark
-        generate_query_json("datasets/enwiki/enwiki-10.csv", 4, "datasets/enwiki/operations.json")
-
     for path, engine in config_paths:
         if not os.path.exists(path):
-            print(f"qdrant does not support full text search")
+            print(f"{engine} does not support the specific mode")
             continue
         print("Running", engine, "with", path)
         client = get_client(engine, path, args)

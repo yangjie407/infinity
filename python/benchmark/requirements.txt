@@ -1,0 +1,4 @@
+elasticsearch == 8.13.0
+h5py == 3.11.0
+numpy == 1.26.4
+qdrant-client == 1.8.2

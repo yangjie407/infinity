@@ -1,10 +1,12 @@
-version: '3.7'
-
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    image: elasticsearch:8.13.0
     container_name: elasticsearch
     environment:
+      - SERVER_SSL_ENABLED=false
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
@@ -19,5 +21,4 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${CPUS_LIMIT:-8}'
           memory: '${MEMORY_LIMIT:-25Gb}'

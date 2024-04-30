@@ -69,7 +69,7 @@ class InfinityClient(BaseClient):
             with open(dataset_path, 'r') as f:
                 actions = []
                 for i, line in enumerate(f):
-                    if i % batch_size == 0 and i != 0:
+                    if i % batch_size == 0 and i!=0:
                         table_obj.insert(actions)
                         actions = []
                     record = json.loads(line)
